@@ -1,2 +1,4 @@
 env
 .vscode
+core/__pycache__
+__pycache__

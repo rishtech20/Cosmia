@@ -1,2 +1,4 @@
 requests
 redis
+html5lib
+bs4
