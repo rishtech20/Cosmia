@@ -41,10 +41,11 @@ class Frontier():
                                 url.rstrip('/') + '/' + link)
 
     def get_seed(self):
-        pass
+        return list(map(lambda x: x.decode(
+            'utf-8'), r.smembers(self.seed_key)))
 
-    def remove_seed(self):
-        pass
+    def remove_seed(self, seed_urls):
+        return r.srem(self.seed_key, *set(seed_urls))
 
     def get_frontier(self):
         pass
@@ -55,6 +56,12 @@ class Frontier():
 
 frontier = Frontier()
 
-frontier.add_seed(['https://news.ycombinator.com/'])
+frontier.add_seed(['https://news.ycombinator.com/',
+                   'https://blog.rishabhmadan.com'])
 
-frontier.start_seeding()
+print(frontier.get_seed())
+
+frontier.remove_seed(['https://news.ycombinator.com/',
+                      'https://blog.rishabhmadan.com'])
+
+print(frontier.get_seed())
