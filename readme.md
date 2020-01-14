@@ -1,1 +1,1 @@
-# Cyclocosmia
+# Cosmia
