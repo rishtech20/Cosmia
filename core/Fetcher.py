@@ -3,47 +3,24 @@ import redis
 from concurrent.futures import ThreadPoolExecutor
 import sys
 
-REDIS_HOST = 'localhost'
-REDIS_PORT = 6379
-
-urls = [
-    'https://www.3dbuzz.com/',
-    'https://www.wsj.com/articles/visa-nears-deal-to-buy-fintech-startup-plaid-11578948426',
-    'https://appleinsider.com/articles/20/01/13/app-tracking-alert-in-ios-13-has-dramatically-cut-location-data-flow-to-ad-industry',
-    'http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.86.6185&rep=rep1&type=pdf',
-    'https://whatismusic.info/blog/AUnifiedTheoryOfMusicAndDreaming.html',
-    'https://blog.samaltman.com/how-to-invest-in-startups'
-]
-
-r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
-
-
-def populate_redis(urls):
-    r.lpush('todo', *urls)
-
-# WE will use list for the todo_pipe and list for the done pipe
-
 
 class Fetcher():
-    def __init__(self, todo_pipe='todo', done_pipe='done', batch_size=16):
-        self.todo_pipe = todo_pipe
+    def __init__(self, done_pipe='done', batch_size=16, redis_client=None):
         self.done_pipe = done_pipe
         self.batch_size = batch_size
         self._batch = []
 
-    def fetch(self):
-        self._read_queue()
+    def fetch(self, pipeline):
+        self._read_queue(pipeline)
         print(f'Starting to download a batch of {len(self._batch)} items\n\n')
         results = []
         with ThreadPoolExecutor() as executor:
-            results = executor.map(self._make_request, urls)
+            results = executor.map(self._make_request, self._batch)
         self._write_to_queue(results)
         print(f'\n\nDownloaded batch of {len(self._batch)} items')
 
-    def _read_queue(self):
-        self._batch = list(map(lambda x: x.decode(
-            'utf-8'), r.lrange(self.todo_pipe, 0, self.batch_size)))
-        r.ltrim(self.todo_pipe, self.batch_size, r.llen(self.todo_pipe))
+    def _read_queue(self, pipeline):
+        self._batch = pipeline.pop(size=self.batch_size)
 
     def _write_to_queue(self, results):
         for res in results:
@@ -53,8 +30,3 @@ class Fetcher():
     def _make_request(self, url):
         res = requests.get(url)
         return {'content': res.content, 'url': url}
-
-
-fetcher = Fetcher()
-populate_redis(urls)
-fetcher.fetch()
